@@ -11,21 +11,27 @@ exports.verifyPurchase = function(data) {
 
   // get our configuration values for Google Play authentication from Parse.Config
   Parse.Config.get().then(function(config) {
-    var webClientID = (config.get('googlePlayAuth'))['clientID'];
-    var webClientSecret = (config.get('googlePlayAuth'))['clientSecret'];
-    var refreshToken = (config.get('googlePlayAuth'))['refreshToken'];
-    
-    // Now make a call to obtain an access_token
-    return Parse.Cloud.httpRequest({
-            method: 'POST',
-            url: refreshURI,
-            body: {
-              client_id: webClientID,
-              client_secret:webClientSecret,
-              refresh_token:refreshToken,
-              grant_type:'refresh_token'
-            }
-          });
+    var configData = config.get('googlePlayAuth');
+    var webClientID = configData['clientID'];
+    var webClientSecret = configData['clientSecret'];
+    var refreshToken = configData['refreshToken'];
+
+    if (configData === undefined) {
+      return Parse.Promise.error({'status':-1,'extraError':'Google Authentication data required in Parse.Config'})
+    }
+    else {
+      // Now make a call to obtain an access_token
+      return Parse.Cloud.httpRequest({
+              method: 'POST',
+              url: refreshURI,
+              body: {
+                client_id: webClientID,
+                client_secret:webClientSecret,
+                refresh_token:refreshToken,
+                grant_type:'refresh_token'
+              }
+            });
+    }
 
   }).then(function(httpResponse) {
   	// expected response
@@ -41,7 +47,8 @@ exports.verifyPurchase = function(data) {
   	}
 
   	// build our URL, first the base url and then add the parameter of the access_token
-  	var validateURL = validateURIBase + data.iapPackageName + "/purchases/products/" + data.iapProductId + "/tokens/" + data.iapToken;
+    var subOrPurch = (data.subscription === undefined) ? "/purchases/products/" : "/purchases/subscriptions/";
+  	var validateURL = validateURIBase + data.iapPackageName + subOrPurch + data.iapProductId + "/tokens/" + data.iapToken;
   	validateURL += "?access_token=" + access_token;
 
   	// now call Google for the final verification with a GET http request using the above created URL
