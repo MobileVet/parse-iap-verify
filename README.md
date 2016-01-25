@@ -51,14 +51,23 @@ var iap = require('cloud/iapVerify');
 
 var platform = 'apple';
 var payment = {
-    receipt: 'receipt data',    // always required
-    productId: 'abc',           // used for secondary verification
-    packageName: 'my.app'       // Android only
+    receipt: 'receipt data',        // must be base64 for Apple
+    productId: '0001',
+    packageName: 'com.company.app'
 };
 
-iap.verifyPayment(platform, payment, function (error, response) {
-    /* your code */
-});
+iap.verifyPayment(platform, payment);
+
+// Returns a Promise w/ JSON result
+// SUCCESS - status = 0, receipt information passed verification
+// {    'status':0,
+//   'productId':'0001',
+//     'receipt':{store_specific_receipt_data} 
+// }
+// FAILURES
+// {    'status':123,
+//    extraError:'informational string'
+// }
 ```
 
 ## References
@@ -89,6 +98,7 @@ iap.verifyPayment(platform, payment, function (error, response) {
 
 ##Thank You
 Kudos to:
+
 [Kalina](http://stackoverflow.com/users/794243/kalina) for outlining the steps required for Android IAP verification.  Many people tried, but yours were the only ones that actually worked!
 
 [Stackoverflow Post](http://stackoverflow.com/questions/12427479/am-i-getting-the-steps-right-for-verifying-a-users-android-in-app-subscription)
@@ -104,9 +114,4 @@ Use [Github issues](https://github.com/MobileVet/parse-iap-verify/issues) to tra
 
 ## Licence
 
-MIT 
-
-
-
-
-
+MIT

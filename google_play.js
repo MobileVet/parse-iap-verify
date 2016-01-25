@@ -3,8 +3,8 @@ var refreshURI = "https://accounts.google.com/o/oauth2/token"
 var validateURIBase = "https://www.googleapis.com/androidpublisher/v2/applications/"
 
 // Dictionary parameters passed in via 'data'
+// key = "iapReceipt", string = receipt token from Google Play store
 // key = "iapProductId", string = purchased product ID
-// key = "iapToken", string = receipt token from purchase
 // key = "iapPackageName", string = application package name
 exports.verifyPurchase = function(data) {
   var myPromise = new Parse.Promise();
@@ -17,7 +17,7 @@ exports.verifyPurchase = function(data) {
     var refreshToken = configData['refreshToken'];
 
     if (configData === undefined) {
-      return Parse.Promise.error({'status':-1,'extraError':'Google Authentication data required in Parse.Config'})
+      return Parse.Promise.error({'status':-2,'extraError':'Google Authentication data required in Parse.Config'})
     }
     else {
       // Now make a call to obtain an access_token
@@ -48,7 +48,7 @@ exports.verifyPurchase = function(data) {
 
   	// build our URL, first the base url and then add the parameter of the access_token
     var subOrPurch = (data.subscription === undefined) ? "/purchases/products/" : "/purchases/subscriptions/";
-  	var validateURL = validateURIBase + data.iapPackageName + subOrPurch + data.iapProductId + "/tokens/" + data.iapToken;
+  	var validateURL = validateURIBase + data.iapPackageName + subOrPurch + data.iapProductId + "/tokens/" + data.iapReceipt;
   	validateURL += "?access_token=" + access_token;
 
   	// now call Google for the final verification with a GET http request using the above created URL
@@ -60,20 +60,19 @@ exports.verifyPurchase = function(data) {
   }).then(function(httpResponse) {
   	// expected response
   	// {
-  	//	 "kind": "androidpublisher#productPurchase",	// This kind represents an inappPurchase
+  	//	 "kind": "androidpublisher#productPurchase",// This kind represents an inappPurchase
   	//	 "purchaseTimeMillis": "1453141119142",			// The time the product was purchased
-  	//	 "purchaseState": 0,							// 0 - Purchased, 1 - cancelled
-  	//	 "consumptionState": 1,							// 0 - Yet to be consumed, 1 - Consumed
+  	//	 "purchaseState": 0,							          // 0 - Purchased, 1 - cancelled
+  	//	 "consumptionState": 1,							        // 0 - Yet to be consumed, 1 - Consumed
   	// 	 "developerPayload": "DsSoYQef1tI0MGni8l01kQMhBWi5xwit680nuMumhOy9XV4iKz"	// A developer-specified string that contains supplemental information about an order
   	// }
   	var respData = JSON.parse(httpResponse.text);	// package up the response
-  	var developerPayload = respData.developerPayload;
-  	if (httpResponse.status != 200 || developerPayload === undefined) {
+  	if (httpResponse.status != 200) {
   	  myPromise.resolve({'status':httpResponse.status,'extraError':'G-Play verify step 2 Failed: ' + httpResponse.text});	
   	}
     else {
   	  // if we made it here, we were successful
-  	  myPromise.resolve({'status':0});
+  	  myPromise.resolve({'status':0,'productId':data.iapProductId,'receipt':respData});
     }
 
   },function(error) {
